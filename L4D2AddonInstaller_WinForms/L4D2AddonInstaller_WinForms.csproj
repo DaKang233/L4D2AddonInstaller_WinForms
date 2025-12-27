@@ -167,8 +167,12 @@
     <None Include="shell32_00123.ico" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="tools\7z.dll" />
-    <Content Include="tools\7z.exe" />
+    <Content Include="tools\7z.dll">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+    <Content Include="tools\7z.exe">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />

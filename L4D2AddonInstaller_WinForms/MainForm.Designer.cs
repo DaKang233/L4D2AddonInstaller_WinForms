@@ -55,10 +55,12 @@
             this.lblDownloadStatusTxt = new System.Windows.Forms.Label();
             this.groupBoxPathDetection = new System.Windows.Forms.GroupBox();
             this.groupBoxDownload = new System.Windows.Forms.GroupBox();
+            this.buttonCancel = new System.Windows.Forms.Button();
             this.labelDownloadPercent = new System.Windows.Forms.Label();
             this.btnAbout = new System.Windows.Forms.Button();
             this.btnOneClickFinishAll = new System.Windows.Forms.Button();
             this.btn7ZipForm = new System.Windows.Forms.Button();
+            this.btnOpenArchiveDownloadFolder = new System.Windows.Forms.Button();
             this.groupBoxServerInfo.SuspendLayout();
             this.groupBoxPathDetection.SuspendLayout();
             this.groupBoxDownload.SuspendLayout();
@@ -325,6 +327,8 @@
             // 
             // groupBoxDownload
             // 
+            this.groupBoxDownload.Controls.Add(this.btnOpenArchiveDownloadFolder);
+            this.groupBoxDownload.Controls.Add(this.buttonCancel);
             this.groupBoxDownload.Controls.Add(this.labelDownloadPercent);
             this.groupBoxDownload.Controls.Add(this.labelCodeName);
             this.groupBoxDownload.Controls.Add(this.textBox3CodeName);
@@ -338,6 +342,19 @@
             this.groupBoxDownload.TabIndex = 13;
             this.groupBoxDownload.TabStop = false;
             this.groupBoxDownload.Text = "下载";
+            // 
+            // buttonCancel
+            // 
+            this.buttonCancel.Enabled = false;
+            this.buttonCancel.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.buttonCancel.Location = new System.Drawing.Point(468, 17);
+            this.buttonCancel.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.buttonCancel.Name = "buttonCancel";
+            this.buttonCancel.Size = new System.Drawing.Size(113, 33);
+            this.buttonCancel.TabIndex = 29;
+            this.buttonCancel.Text = "终止当前操作";
+            this.buttonCancel.UseVisualStyleBackColor = true;
+            this.buttonCancel.Click += new System.EventHandler(this.buttonCancel_Click);
             // 
             // labelDownloadPercent
             // 
@@ -382,6 +399,18 @@
             this.btn7ZipForm.Text = "解压缩功能";
             this.btn7ZipForm.UseVisualStyleBackColor = true;
             this.btn7ZipForm.Click += new System.EventHandler(this.btn7ZipForm_Click);
+            // 
+            // btnOpenArchiveDownloadFolder
+            // 
+            this.btnOpenArchiveDownloadFolder.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.btnOpenArchiveDownloadFolder.Location = new System.Drawing.Point(300, 17);
+            this.btnOpenArchiveDownloadFolder.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.btnOpenArchiveDownloadFolder.Name = "btnOpenArchiveDownloadFolder";
+            this.btnOpenArchiveDownloadFolder.Size = new System.Drawing.Size(163, 33);
+            this.btnOpenArchiveDownloadFolder.TabIndex = 30;
+            this.btnOpenArchiveDownloadFolder.Text = "打开压缩包下载目录";
+            this.btnOpenArchiveDownloadFolder.UseVisualStyleBackColor = true;
+            this.btnOpenArchiveDownloadFolder.Click += new System.EventHandler(this.btnOpenArchiveDownloadFolder_Click);
             // 
             // MainForm
             // 
@@ -447,6 +476,8 @@
         private System.Windows.Forms.Button btn7ZipForm;
         private System.Windows.Forms.Label labelDownloadPercent;
         public System.Windows.Forms.TextBox textBox1GamePath;
+        private System.Windows.Forms.Button buttonCancel;
+        private System.Windows.Forms.Button btnOpenArchiveDownloadFolder;
     }
 }
 

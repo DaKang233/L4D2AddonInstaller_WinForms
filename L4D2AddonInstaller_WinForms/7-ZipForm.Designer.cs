@@ -92,9 +92,9 @@
             this.labelArchivePath.AutoSize = true;
             this.labelArchivePath.Location = new System.Drawing.Point(7, 47);
             this.labelArchivePath.Name = "labelArchivePath";
-            this.labelArchivePath.Size = new System.Drawing.Size(79, 20);
+            this.labelArchivePath.Size = new System.Drawing.Size(316, 20);
             this.labelArchivePath.TabIndex = 3;
-            this.labelArchivePath.Text = "压缩包路径";
+            this.labelArchivePath.Text = "压缩包路径(支持多个压缩包,使用浏览按钮来多选)";
             // 
             // buttonStart
             // 
@@ -136,13 +136,13 @@
             this.labelPercent.Text = "0%";
             this.labelPercent.TextAlign = System.Drawing.ContentAlignment.TopRight;
             // 
-            // buttonStop
+            // buttonCancel
             // 
             this.buttonCancel.Enabled = false;
             this.buttonCancel.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
             this.buttonCancel.Location = new System.Drawing.Point(199, 13);
             this.buttonCancel.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
-            this.buttonCancel.Name = "buttonStop";
+            this.buttonCancel.Name = "buttonCancel";
             this.buttonCancel.Size = new System.Drawing.Size(88, 30);
             this.buttonCancel.TabIndex = 9;
             this.buttonCancel.Text = "终止";

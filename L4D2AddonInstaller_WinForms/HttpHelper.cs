@@ -1,7 +1,9 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace L4D2AddonInstaller_WinForms
@@ -63,53 +65,82 @@ namespace L4D2AddonInstaller_WinForms
         /// <param name="url">文件的URL地址</param>
         /// <param name="savePath">文件的保存路径</param>
         /// <param name="progress">进度回调接口，用于报告下载进度百分比</param>
-        public static async Task DownloadFileAsync(string url, string savePath, IProgress<int> progress = null)
+        public static async Task DownloadFileAsync(
+            string url,
+            string savePath,
+            CancellationToken cancellationToken,
+            IProgress<int> progress = null)
         {
+            HttpResponseMessage response = null;
+            CancellationTokenRegistration ctr = default;
+
             try
             {
-                // 使用HttpClient发送异步GET请求，获取响应头信息后即开始接收内容
-                using (var response = await _httpClient.GetAsync(url, HttpCompletionOption.ResponseHeadersRead))
+                response = await _httpClient.GetAsync(
+                    url,
+                    HttpCompletionOption.ResponseHeadersRead
+                );
+
+                response.EnsureSuccessStatusCode();
+
+                // 注册取消回调：一旦取消，立刻 Dispose response
+                ctr = cancellationToken.Register(() =>
                 {
-                    // 确保HTTP响应状态码为成功状态码（200-299）
-                    response.EnsureSuccessStatusCode();
+                    try { response.Dispose(); } catch { }
+                });
 
-                    // 获取HTTP响应内容的总字节数，如果获取不到则设为0
-                    var totalBytes = response.Content.Headers.ContentLength ?? 0;
-                    var downloadedBytes = 0L; // 已下载的字节数初始化为0
-                    var buffer = new byte[8192]; // 创建一个8KB的缓冲区用于读取和写入文件
+                var totalBytes = response.Content.Headers.ContentLength ?? 0;
+                var downloadedBytes = 0L;
+                var buffer = new byte[8192];
 
-                    // 异步读取HTTP响应内容的流
-                    using (var stream = await response.Content.ReadAsStreamAsync())
-                    // 创建或打开文件以写入下载的数据
-                    using (var fileStream = System.IO.File.Create(savePath))
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var fileStream = File.Create(savePath))
+                {
+                    int bytesRead;
+                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
-                        int bytesRead; // 定义一个变量用于存储每次读取的字节数
-                        // 循环读取HTTP响应流中的数据，直到没有更多数据可读（bytesRead <= 0）
-                        while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length)) > 0)
-                        {
-                            // 将读取到的数据写入文件流
-                            await fileStream.WriteAsync(buffer, 0, bytesRead);
-                            downloadedBytes += bytesRead; // 更新已下载的字节数
+                        // 主动检查取消
+                        cancellationToken.ThrowIfCancellationRequested();
 
-                            // 如果提供了进度回调接口且总字节数大于0，则计算下载进度百分比并报告
-                            if (totalBytes > 0 && progress != null)
-                            {
-                                var percent = (int)((downloadedBytes * 100.0) / totalBytes); // 计算百分比
-                                progress.Report(percent); // 报告进度
-                            }
+                        await fileStream.WriteAsync(buffer, 0, bytesRead);
+                        downloadedBytes += bytesRead;
+
+                        if (totalBytes > 0 && progress != null)
+                        {
+                            int percent = (int)(downloadedBytes * 100.0 / totalBytes);
+                            progress.Report(percent);
                         }
                     }
                 }
             }
-            catch (HttpRequestException ex)
+            catch (OperationCanceledException)
             {
-                throw new Exception($"网络请求失败：{ex.Message}");
+                if (File.Exists(savePath))
+                    File.Delete(savePath);
+
+                throw; // 非常重要：向上传递“取消”
+            }
+            catch (ObjectDisposedException)
+            {
+                // HttpResponse 被 Dispose，通常意味着取消
+                if (File.Exists(savePath))
+                    File.Delete(savePath);
+
+                throw new OperationCanceledException(cancellationToken);
             }
             catch (Exception ex)
             {
-                // 抛出自定义异常，包含原始异常信息
-                throw new Exception($"下载文件失败，请尝试联系开发者：{ex.Message}", ex);
+                if (File.Exists(savePath))
+                    File.Delete(savePath);
+
+                throw new Exception($"下载文件失败：{ex.Message}", ex);
+            }
+            finally
+            {
+                ctr.Dispose();
+                response?.Dispose();
             }
         }
+
     }
 }

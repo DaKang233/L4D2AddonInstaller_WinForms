@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -27,9 +28,64 @@ namespace L4D2AddonInstaller_WinForms
         }
         // 全局变量
         public static SevenZipHelper.OverwriteMode overwriteMode = SevenZipHelper.OverwriteMode.OverwriteAll;
+        public static bool IsOneClickAction = false;
+        public event EventHandler<bool> InstallationFinished;
+        public CancellationTokenSource _cts;
+
+        // 解压相关全局变量（关闭窗口时保留值）
         public static string ArchivePath = "";
         public static string OutputDirPath = "";
         public static string SevenZipPath = "";
+
+        /// <summary>
+        /// Represents a request to extract files from one or more 7-Zip archives.
+        /// </summary>
+        /// <remarks>Use this class to specify the parameters required for extracting files from 7-Zip
+        /// archives, including the archive paths, output directory, and extraction options. All properties must be set
+        /// before initiating the extraction process.</remarks>
+        public class ExtractRequest
+        {
+            /// <summary>
+            /// 7-Zip压缩包路径（多个用分号分隔）
+            /// </summary>
+            public string ArchivePath { get; set; }
+            /// <summary>
+            /// 解压输出目录路径
+            /// </summary>
+            public string OutputDirPath { get; set; }
+            /// <summary>
+            /// 7-Zip可执行文件路径
+            /// </summary>
+            public string SevenZipPath { get; set; } 
+            /// <summary>
+            /// 是否自动解压
+            /// </summary>
+            public bool IsAutoExtract { get; set; }
+
+            public string IncludeFiles { get; set; }
+        }
+
+        /// <summary>
+        /// Determines whether the current Steam path is valid by checking for the presence of the Steam executable.
+        /// </summary>
+        /// <returns>true if the specified Steam path exists and contains the 'steam.exe' file; otherwise, false.</returns>
+        bool IsSteamPathValid()
+        {
+            var steamPath = textBox2SteamPath.Text.Trim();
+            if (string.IsNullOrEmpty(steamPath) || !Directory.Exists(steamPath))
+                return false;
+            var steamExePath = Path.Combine(steamPath, "steam.exe");
+            return File.Exists(steamExePath);
+        }
+
+        bool IsL4D2PathValid()
+        {
+            var gamePath = textBox1GamePath.Text.Trim();
+            if (string.IsNullOrEmpty(gamePath) || !Directory.Exists(gamePath))
+                return false;
+            var l4d2ExePath = Path.Combine(gamePath, "left4dead2.exe");
+            return File.Exists(l4d2ExePath);
+        }
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
@@ -279,14 +335,30 @@ namespace L4D2AddonInstaller_WinForms
                 MessageBox.Show("请先检索/选择L4D2安装路径", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
+            if (!IsSteamPathValid())
+            {
+                MessageBox.Show("Steam路径无效，请确认Steam已安装且路径正确", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (!IsL4D2PathValid())
+            {
+                MessageBox.Show("L4D2路径无效，请确认游戏已安装且路径正确", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
 
-            // 2. 初始化UI状态
+            // 2. 初始化状态
             btnCodeName.Enabled = false;
             pbDownloadProgress.Value = 0;
             lblDownloadStatus.Text = "正在获取下载配置...";
             textBoxServerInfo.Text = "";
             textBoxConsoleCmd.Text = "";
             labelDownloadPercent.Text = "0%";
+            InstallationFinished?.Invoke(this,false);
+            _cts = new CancellationTokenSource();
+            var cancellationToken = _cts.Token;
+
+            // 确定是否需要解压
+            bool IsAutoExtract = false;
 
             try
             {
@@ -383,6 +455,16 @@ namespace L4D2AddonInstaller_WinForms
                             continue;
                         }
                         var addonsInstallPath = Path.Combine(textBox1GamePath.Text.Trim(), "left4dead2", "addons");
+                        var addonsInstallPath2 = Path.Combine(textBox1GamePath.Text.Trim(), "l4d2InstallToolDownloads");
+                        if (fileName.EndsWith(".zip") || fileName.EndsWith(".7z")) // 对于压缩包文件，放在addons/l4d2InstallToolDownloads目录下
+                        {
+                            if (!Directory.Exists(addonsInstallPath2))
+                            {
+                                Directory.CreateDirectory(addonsInstallPath2); // 自动创建文件夹
+                            }
+                            addonsInstallPath = addonsInstallPath2;
+                            IsAutoExtract = true;
+                        }
                         var savePath = Path.Combine(addonsInstallPath, fileName);
                         downloadItems.Add(Tuple.Create(finalUri, fileName, savePath));
                     }
@@ -407,9 +489,12 @@ namespace L4D2AddonInstaller_WinForms
                 }
 
                 // 8. 异步并发下载（使用 SemaphoreSlim + Task 管理，替换 Parallel.ForEach + async lambda 的错误用法）
+                buttonCancel.Enabled = true;    // 启用终止功能
+
                 lblDownloadStatus.Text = "开始下载附加组件...";
                 var totalFiles = downloadItems.Count;
                 var downloadedFiles = 0;
+                var filename = "";
                 var progress = new Progress<int>(percent =>
                 {
                     // 跨线程更新进度条（平均进度）
@@ -418,6 +503,7 @@ namespace L4D2AddonInstaller_WinForms
                         double progressValue = (downloadedFiles * 100.0 + percent) / totalFiles;
                         pbDownloadProgress.Value = (int)Math.Min(progressValue, 100); // 确保进度条的值不超过100
                         labelDownloadPercent.Text = Math.Round(Math.Min(progressValue, 100.0),2).ToString()+"%";
+                        lblDownloadStatus.Text = $"正在下载第 {downloadedFiles + 1}/{totalFiles} 个文件: {filename} ...";
                     }
                     catch (Exception ex) { Debug.WriteLine($"更新进度条时出错：{ex}"); }
                 });
@@ -428,17 +514,26 @@ namespace L4D2AddonInstaller_WinForms
                 {
                     await semaphore.WaitAsync();
                     var uri = item.Item1;
+                    filename = item.Item2;
                     var savePath = item.Item3;
                     tasks.Add(Task.Run(async () =>
                     {
                         try
                         {
-                            await HttpHelper.DownloadFileAsync(uri.ToString(), savePath, progress);
+                            await HttpHelper.DownloadFileAsync(uri.ToString(), savePath, cancellationToken, progress);
 
                             Interlocked.Increment(ref downloadedFiles);
                             Invoke(new Action(() =>
                             {
-                                lblDownloadStatus.Text = $"已下载：{downloadedFiles}/{totalFiles} 个文件";
+                                lblDownloadStatus.Text = $"已下载第 {downloadedFiles}/{totalFiles} 个文件：{item.Item2}";
+                            }));
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            // 下载被取消，直接返回
+                            Invoke(new Action(() =>
+                            {
+                                lblDownloadStatus.Text = $"下载已取消。已下载：{downloadedFiles}/{totalFiles} 个文件";
                             }));
                         }
                         catch (Exception ex)
@@ -460,13 +555,75 @@ namespace L4D2AddonInstaller_WinForms
                 // 等待所有任务完成（若有失败，Task.WhenAll 会抛出聚合异常）
                 await Task.WhenAll(tasks);
 
+                if (cancellationToken.IsCancellationRequested) {
+                    buttonCancel.Enabled = false;
+                    _cts.Dispose();
+                    return;
+                }
+
                 // 9. 下载完成处理
-                lblDownloadStatus.Text = "所有附加组件下载并安装完成！";
-                pbDownloadProgress.Value = 100;
-                MessageBox.Show("附加组件下载安装完成！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                if (!IsAutoExtract) lblDownloadStatus.Text = "所有附加组件下载并安装完成！";
+                else lblDownloadStatus.Text = "所有附加组件已下载；检测到压缩包(尚未解压)。";
+                    pbDownloadProgress.Value = 100;
+                if (!IsOneClickAction)
+                    MessageBox.Show("附加组件下载安装完成！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
+
+                // 9.1 解压缩下载到的安装包（若有）
+                bool IsExtractedSuccessfully = false;
+                DialogResult dialogResult = DialogResult.None;
+                if (IsAutoExtract)
+                    if (!IsOneClickAction)
+                        dialogResult = MessageBox.Show("检测到压缩包，请确认是否需要解压？", "提示", MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
+                    else dialogResult = DialogResult.OK;
+                if (dialogResult == DialogResult.OK)
+                {
+                    try {
+                        if (Directory.Exists(Path.Combine(textBox1GamePath.Text.Trim(), "l4d2InstallToolDownloads")))
+                        {
+                            var downloadedArchives = Directory.GetFiles(
+                                Path.Combine(textBox1GamePath.Text.Trim(), "l4d2InstallToolDownloads"),
+                                "*.*", SearchOption.TopDirectoryOnly)
+                                .Where(f => f.EndsWith(".zip") || f.EndsWith(".7z")).ToArray();
+                            var archiveCount = downloadedArchives.Count();
+                            if (downloadedArchives.Any())
+                            {
+                                var archives = new StringBuilder();
+                                for (int i = 0; i <= archiveCount - 1; i++)
+                                    archives.Append($"{downloadedArchives[i]};");
+                                archives.Length--; // 去掉最后一个分号
+
+                                var request = new ExtractRequest
+                                {
+                                    ArchivePath = archives.ToString(),
+                                    OutputDirPath = Path.Combine(textBox1GamePath.Text.Trim(), "left4dead2", "addons"),
+                                    SevenZipPath = SevenZipHelper.Default7ZipFullPath(),
+                                    IsAutoExtract = true,
+                                    IncludeFiles = "*.vpk"
+                                };
+
+                                using (var form = new SevenZipForm(request))
+                                {
+                                    form.ExtractionCompleted += (s, success) =>
+                                    {
+                                        if (success)
+                                            IsExtractedSuccessfully = true;
+                                    };
+                                    form.ShowDialog();
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        MessageBox.Show($"解压缩附加组件失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    }
+                }
+                if (!IsExtractedSuccessfully)
+                    lblDownloadStatus.Text = "所有不需要解压的附加组件已下载并安装完成！";
+                else lblDownloadStatus.Text = "所有附加组件下载并安装完成！";
 
                 // 10. 自动启动游戏（若勾选）
-                if (chkAutoStartGame.Checked && !string.IsNullOrEmpty(gameServerHost) && !string.IsNullOrEmpty(gameServerPort))
+                if (chkAutoStartGame.Checked && !string.IsNullOrEmpty(gameServerHost) && !string.IsNullOrEmpty(gameServerPort) && (IsAutoExtract ? IsExtractedSuccessfully : true))
                 {
                     await StartL4D2GameAsync(gameServerHost, gameServerPort);
                 }
@@ -479,7 +636,10 @@ namespace L4D2AddonInstaller_WinForms
             finally
             {
                 // 恢复按钮状态
+                InstallationFinished?.Invoke(this,true);
                 btnCodeName.Enabled = true;
+                buttonCancel.Enabled = false;
+                _cts.Dispose();
             }
         }
 
@@ -502,6 +662,11 @@ namespace L4D2AddonInstaller_WinForms
             if (!Directory.Exists(textBox1GamePath.Text.Trim()))
             {
                 MessageBox.Show("L4D2 安装路径不存在，请确认游戏已安装。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+            if (!IsL4D2PathValid() || !IsSteamPathValid())
+            {
+                MessageBox.Show("L4D2或Steam路径无效，请确认路径正确。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             if (!ProcessHelper.IsProcessRunning("steam"))
@@ -612,6 +777,11 @@ namespace L4D2AddonInstaller_WinForms
 
         private void btnStartSteam_Click(object sender, EventArgs e)
         {
+            if (!IsSteamPathValid())
+            {
+                MessageBox.Show("Steam路径无效，请确认Steam已安装且路径正确", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
             try
             {
                 var steamExe = Path.Combine(textBox2SteamPath.Text.Trim(), "steam.exe");
@@ -643,19 +813,35 @@ namespace L4D2AddonInstaller_WinForms
         /// <param name="e"></param>
         private void btnOneClickFinishAll_Click(object sender, EventArgs e)
         {
+            btnOneClickFinishAll.Enabled = false;
             try
             {
                 if (string.IsNullOrEmpty(textBox3CodeName.Text))
                 {
                     MessageBox.Show("请先在下载区域输入下载代号（如1、231）", "提示", 
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    btnOneClickFinishAll.Enabled = true;
                     return;
                 }
+                IsOneClickAction = true;
                 btnDetectAllPath_Click(sender, e);
                 btnCodeName_Click(sender, e);
             }
             catch (Exception ex) {
                 MessageBox.Show($"一键完成操作失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                IsOneClickAction = false;
+                btnOneClickFinishAll.Enabled = true;
+            }
+            finally
+            {
+                InstallationFinished += (s, success) =>
+                {
+                    if (success)
+                    {
+                        IsOneClickAction = false;
+                        btnOneClickFinishAll.Enabled = true;
+                    }
+                };
             }
         }
 
@@ -666,9 +852,44 @@ namespace L4D2AddonInstaller_WinForms
         /// <param name="e"></param>
         private void btn7ZipForm_Click(object sender, EventArgs e)
         {
-            using (SevenZipForm sevenZipForm = new SevenZipForm(this))
+            using (SevenZipForm sevenZipForm = new SevenZipForm())
             {
                 sevenZipForm.ShowDialog();
+            }
+        }
+
+        private void buttonCancel_Click(object sender, EventArgs e)
+        {
+            if (_cts != null && !_cts.IsCancellationRequested)
+            {
+                _cts.Cancel();
+                buttonCancel.Enabled = false;
+                lblDownloadStatus.Text = "正在取消下载，请稍候...";
+            }
+        }
+
+        private void btnOpenArchiveDownloadFolder_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(textBox1GamePath.Text.Trim()))
+            {
+                MessageBox.Show("请先检索/选择L4D2安装路径", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            if (!IsL4D2PathValid())
+            {
+                MessageBox.Show("L4D2安装路径似乎不正确，请确认", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+            using (Process process = new Process())
+            {
+                process.StartInfo.FileName = "explorer.exe";
+                var archiveDownloadPath = Path.Combine(textBox1GamePath.Text.Trim(), "l4d2InstallToolDownloads");
+                if (!Directory.Exists(archiveDownloadPath))
+                {
+                    Directory.CreateDirectory(archiveDownloadPath);
+                }
+                process.StartInfo.Arguments = archiveDownloadPath;
+                process.Start();
             }
         }
     }

@@ -11,30 +11,77 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using static L4D2AddonInstaller_WinForms.MainForm;
+using static L4D2AddonInstaller_WinForms.SevenZipHelper;
 
 namespace L4D2AddonInstaller_WinForms
 {
+    /// <summary>
+    /// Represents a Windows Form that provides a graphical interface for extracting archive files using 7-Zip. Allows
+    /// users to select archives, specify extraction options, and monitor extraction progress with support for multiple
+    /// files and cancellation.
+    /// </summary>
+    /// <remarks>SevenZipForm enables users to extract one or more supported archive files (such as .7z, .zip,
+    /// .rar, etc.) to a specified output directory using a chosen 7-Zip executable. The form validates user input,
+    /// displays progress and status updates, and allows cancellation of ongoing extraction operations. Extraction can
+    /// be triggered manually or automatically via an ExtractRequest. The ExtractionCompleted event notifies subscribers
+    /// when the extraction process finishes, indicating success or failure. This form is not thread-safe and should be
+    /// used only on the UI thread.</remarks>
     public partial class SevenZipForm : Form
     {
-        private MainForm mainForm;
+        
         private CancellationTokenSource _cts;
-        public SevenZipForm(MainForm mainForm)
+        private readonly ExtractRequest _request;
+
+        /// <summary>
+        /// Initializes a new instance of the SevenZipForm class, optionally pre-populating fields based on the
+        /// specified extract request.
+        /// </summary>
+        /// <remarks>If the provided request is not null and its IsAutoExtract property is true, the form
+        /// fields are initialized with the values from the request. Otherwise, default values from the main form are
+        /// used.</remarks>
+        /// <param name="request">An optional extract request containing initial values for extraction settings. If null, default values are
+        /// used.</param>
+        public SevenZipForm(ExtractRequest request = null)
         {
             InitializeComponent();
-            this.mainForm = mainForm;
-            textBox7ZipPath.Text = MainForm.SevenZipPath;
-            textBoxOutputDir.Text = MainForm.OutputDirPath;
-            textBoxArchivePath.Text = MainForm.ArchivePath;
+            _request = request;
             InitOverrideModeRadio();
+            if ( request != null && request.IsAutoExtract )
+            {
+                textBox7ZipPath.Text = request.SevenZipPath;
+                textBoxOutputDir.Text = request.OutputDirPath;
+                textBoxArchivePath.Text = request.ArchivePath;
+                textBoxIncludeFiles.Text = request.IncludeFiles;
+            }
+            else
+            {
+                textBox7ZipPath.Text = MainForm.SevenZipPath;
+                textBoxOutputDir.Text = MainForm.OutputDirPath;
+                textBoxArchivePath.Text = MainForm.ArchivePath;
+            }
         }
+        public event EventHandler<bool> ExtractionCompleted;
+
+
 
         protected override void OnFormClosing(FormClosingEventArgs e)
         {
-            MainForm.overwriteMode = GetoverwriteModeRadio();
-            MainForm.ArchivePath = textBoxArchivePath.Text;
-            MainForm.OutputDirPath = textBoxOutputDir.Text;
-            MainForm.SevenZipPath = textBox7ZipPath.Text;
+            if (_request == null )
+            {
+                MainForm.overwriteMode = GetoverwriteModeRadio();
+                MainForm.ArchivePath = textBoxArchivePath.Text;
+                MainForm.OutputDirPath = textBoxOutputDir.Text;
+                MainForm.SevenZipPath = textBox7ZipPath.Text;
+            }
             base.OnFormClosing(e);
+        }
+
+        protected override void OnShown(EventArgs e)
+        {
+            if (_request != null && _request.IsAutoExtract)
+                buttonStart.PerformClick();
+            base.OnShown(e);
         }
 
         private void buttonArchiveBrowse_Click(object sender, EventArgs e)
@@ -43,9 +90,10 @@ namespace L4D2AddonInstaller_WinForms
             {
                 openFileDialog.Title = "选择压缩包文件";
                 openFileDialog.Filter = "压缩包文件|*.7z;*.zip;*.rar;*.tar;*.gz;*.bz2;*.xz;*.iso;*.cab;*.arj;*.lzh;*.z|所有文件|*.*";
+                openFileDialog.Multiselect = true;
                 if (openFileDialog.ShowDialog() == DialogResult.OK)
                 {
-                    textBoxArchivePath.Text = openFileDialog.FileName;
+                    textBoxArchivePath.Text = string.Join(";",openFileDialog.FileNames);
                 }
             }
         }
@@ -73,23 +121,20 @@ namespace L4D2AddonInstaller_WinForms
             }
         }
 
+        /// <summary>
+        /// Handles the Click event of the Output Directory Detect button, validating the selected game directory and
+        /// updating the output directory path accordingly.
+        /// </summary>
+        /// <remarks>If the game directory is not specified or does not contain the required executable,
+        /// an error message is displayed and the output directory is not updated.</remarks>
+        /// <param name="sender">The source of the event, typically the button that was clicked.</param>
+        /// <param name="e">An EventArgs object that contains the event data.</param>
         private void buttonOutputDirDetect_Click(object sender, EventArgs e)
         {
-            if ( mainForm == null )
+            var gamePath = MainForm.OutputDirPath;
+            if (string.IsNullOrEmpty(gamePath) || !File.Exists(Path.Combine(gamePath,"left4dead2.exe")))
             {
-                MessageBox.Show("主窗口引用无效（未加载），无法检测输出目录。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            TextBox gamePathTextBox = Universal.FindControlRecursive(mainForm, "textBox1GamePath") as TextBox;
-            if (gamePathTextBox == null)
-            {
-                MessageBox.Show("未找到主窗口中的游戏路径文本框，无法检测输出目录。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-            string gamePath = gamePathTextBox.Text;
-            if (string.IsNullOrEmpty(gamePath) || !System.IO.Directory.Exists(gamePath))
-            {
-                MessageBox.Show("游戏路径无效，无法检测输出目录。请先在主窗口选择正确的 Left 4 Dead 2 安装目录。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("请先指定有效的游戏目录路径。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             string addonsPath = System.IO.Path.Combine(gamePath, "left4dead2", "addons");
@@ -123,6 +168,26 @@ namespace L4D2AddonInstaller_WinForms
             }
         }
 
+        // 本地函数：恢复 UI 状态（只能在最外层调用）
+        void RecoverUIAfterOperation(string StatusText)
+        {
+            if (!string.IsNullOrEmpty(StatusText))
+                labelStatus.Text = StatusText;
+            buttonCancel.Enabled = false;
+            buttonStart.Enabled = true;
+            _cts?.Dispose();
+        }
+
+        /// <summary>
+        /// Handles the Click event of the Start button to begin extracting one or more archive files using the
+        /// specified 7-Zip executable and output directory.
+        /// </summary>
+        /// <remarks>Performs validation of user input before starting the extraction process. Updates the
+        /// user interface to reflect progress and status, and supports cancellation. Displays error messages for
+        /// invalid input or extraction failures. Extraction progress is reported for each archive, and the operation
+        /// can be cancelled by the user.</remarks>
+        /// <param name="sender">The source of the event, typically the Start button.</param>
+        /// <param name="e">An EventArgs object that contains the event data.</param>
         private async void buttonStart_Click(object sender, EventArgs e)
         {
             // 前置检查
@@ -130,95 +195,114 @@ namespace L4D2AddonInstaller_WinForms
                 MessageBox.Show("请指定有效的 7z.exe 的路径。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
-            if (string.IsNullOrEmpty(textBoxArchivePath.Text) || !System.IO.File.Exists(textBoxArchivePath.Text)) {
-                MessageBox.Show("请指定有效的压缩包文件路径。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
+            var archives = textBoxArchivePath.Text.Trim().Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+            foreach (var archive in archives) {
+                if (!System.IO.File.Exists(archive)) {
+                    MessageBox.Show($"压缩包文件不存在：{archive}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    return;
+                }
             }
             if (string.IsNullOrEmpty(textBoxOutputDir.Text) || !System.IO.Directory.Exists(textBoxOutputDir.Text)) {
                 MessageBox.Show("请指定有效的输出目录路径。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
-            // 本地函数：恢复 UI 状态
-            void RecoverUIAfterOperation(string StatusText)
-            {
-                if (!string.IsNullOrEmpty(StatusText))
-                    labelStatus.Text = StatusText;
-                buttonCancel.Enabled = false;
-                buttonStart.Enabled = true;
-                _cts?.Dispose();
-            }
-
-            // 开始解压：UI 状态更新，进度条绑定
+            // 开始解压：UI 状态更新，进度条绑定，初始化变量
             labelPercent.Text = "0%";
             var overwriteMode = GetoverwriteModeRadio();
-            var progress = new Progress<int>(value =>
-            {
-                progressBarCompression.Value = value;
-                labelPercent.Text = $"{value}%";
-            });
             labelStatus.Text = $"正在解压文件：{Path.GetFileName(textBoxArchivePath.Text)}...";
             buttonCancel.Enabled = true;
             buttonStart.Enabled = false;
             _cts = new CancellationTokenSource();
             var cancellationToken = _cts.Token;
-            bool IsEncrypted = false;
+            bool success = false;
 
-            // 执行解压操作
-            if (string.IsNullOrEmpty(textBoxPassword.Text))
-            {
-                try
-                {
-                    // 首先验证压缩包是否需要密码
-                    IsEncrypted = await SevenZipHelper.IsArchiveEncryptedAsync(
-                        textBoxArchivePath.Text,
-                        textBox7ZipPath.Text,
-                        cancellationToken);
-                }
-                catch (OperationCanceledException)
-                {
-                    MessageBox.Show("加密检验操作已被取消。", "已取消", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    RecoverUIAfterOperation("解压已取消。");
-                    return;
-                }
-                if (IsEncrypted)
-                {
-                    MessageBox.Show("压缩包已加密。请在密码框中输入正确的密码后重试。", "需要密码", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    RecoverUIAfterOperation("解压失败，压缩包已加密。");
-                    return;
-                }
-            }
+            int archiveCount = archives.Length;
             try
             {
-                await SevenZipHelper.ValidateArchiveAsync(
-                    textBoxArchivePath.Text,
-                    textBox7ZipPath.Text,
-                    textBoxPassword.Text ?? null,
-                    cancellationToken
-                );
+                for (int i = 0; i < archiveCount; i++)
+                {
+                    int index = i;
+                    var perArchiveProgress = new Progress<int>(value =>
+                    {
+                        int totalPercent = (int)((index + value / 100.0) / archiveCount * 100);
+                        progressBarCompression.Value = Math.Min(totalPercent, 100);
+                        labelPercent.Text = $"{totalPercent}%";
+                    });
+                    labelStatus.Text = $"正在解压文件 {index + 1} / {archiveCount} ：{Path.GetFileName(archives[index])}...";
+                        await ExtractOneArchiveAsync(
+                            archives[index],
+                            perArchiveProgress,
+                            overwriteMode,
+                            cancellationToken
+                            );
+                }
+                success = true;
+                ExtractionCompleted?.Invoke(this, true);
+                if (_request != null && _request.IsAutoExtract)
+                {
+                    this.Close();
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                MessageBox.Show("加密检验操作已被取消。", "已取消", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                RecoverUIAfterOperation("解压已取消。");
+                ExtractionCompleted?.Invoke(this, false);
+                return;
             }
             catch (ArchiveRequiresPasswordException)
             {
                 MessageBox.Show("该压缩包需要密码才能解压。请在密码框中输入正确的密码后重试。", "需要密码", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 RecoverUIAfterOperation("解压失败，压缩包需要密码。");
-                return;
-            }
-            catch (OperationCanceledException)
-            {
-                MessageBox.Show("解压操作已被取消。", "已取消", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                RecoverUIAfterOperation("解压已取消。");
+                ExtractionCompleted?.Invoke(this, false);
                 return;
             }
             catch (Exception ex)
             {
-                MessageBox.Show("验证压缩包时发生错误：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                RecoverUIAfterOperation("解压失败，验证压缩包时发生错误。");
+                MessageBox.Show("解压过程中发生错误：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                RecoverUIAfterOperation("解压失败，发生错误。");
+                ExtractionCompleted?.Invoke(this, false);
                 return;
             }
+            finally
+            {
+                if (success) RecoverUIAfterOperation($"全部压缩包（共 {archiveCount} 个）已解压到指定目录。");
+            }
+        }
 
-            try {
+        /// <summary>
+        /// Extracts the contents of a single archive file asynchronously, reporting progress and handling password
+        /// protection and overwrite options.
+        /// </summary>
+        /// <param name="archivePath">The full path to the archive file to extract. Cannot be null or empty.</param>
+        /// <param name="progress">An optional progress reporter that receives extraction progress updates as percentage values. May be null if
+        /// progress reporting is not required.</param>
+        /// <param name="overwriteMode">Specifies how existing files should be handled during extraction. Determines whether to overwrite, skip, or
+        /// prompt for existing files.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the extraction operation.</param>
+        /// <returns>A task that represents the asynchronous extraction operation.</returns>
+        /// <exception cref="ArchiveRequiresPasswordException">Thrown if the archive is encrypted and no password is provided.</exception>
+        private async Task ExtractOneArchiveAsync(
+                string archivePath,
+                IProgress<int> progress,
+                OverwriteMode overwriteMode,
+                CancellationToken cancellationToken)
+        {
+            // 执行解压操作
+            if (string.IsNullOrEmpty(textBoxPassword.Text))
+            {
+                if (await IsArchiveEncryptedAsync(archivePath, textBox7ZipPath.Text, cancellationToken))
+                    throw new ArchiveRequiresPasswordException();
+            }
+            await SevenZipHelper.ValidateArchiveAsync(
+                archivePath,
+                textBox7ZipPath.Text,
+                textBoxPassword.Text ?? null,
+                cancellationToken
+                );
                 await SevenZipHelper.ExtractAsync(
-                    textBoxArchivePath.Text,
+                    archivePath,
                     textBoxOutputDir.Text,
                     textBox7ZipPath.Text,
                     progress,
@@ -229,23 +313,14 @@ namespace L4D2AddonInstaller_WinForms
                         ? textBoxIncludeFiles.Text.Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries)
                         : null
                 );
-                labelStatus.Text = "解压完成，文件已解压到指定目录。";
-            }
-            catch (OperationCanceledException) {
-                MessageBox.Show("解压操作已被取消。", "已取消", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                RecoverUIAfterOperation("解压已取消。");
-                return;
-            }
-            catch (Exception ex) {
-                MessageBox.Show("解压过程中发生错误：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                RecoverUIAfterOperation("解压失败，发生错误。");
-                return;
-            }
-            finally {
-                RecoverUIAfterOperation("");
-            }
         }
 
+        /// <summary>
+        /// Initializes the overwrite mode radio buttons to reflect the current overwrite mode setting.
+        /// </summary>
+        /// <remarks>This method updates the checked state of the overwrite mode radio buttons based on
+        /// the value of the overwrite mode configured in the main form. It should be called to synchronize the UI with
+        /// the current overwrite mode before displaying or updating the related controls.</remarks>
         private void InitOverrideModeRadio()
         {
             switch (MainForm.overwriteMode)

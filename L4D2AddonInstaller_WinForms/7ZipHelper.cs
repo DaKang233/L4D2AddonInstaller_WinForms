@@ -11,8 +11,12 @@ using System.Threading.Tasks;
 namespace L4D2AddonInstaller_WinForms
 {
     /// <summary>
-    /// 压缩包需要密码的自定义异常
+    /// The exception that is thrown when an operation requires a password-protected archive to be accessed without
+    /// providing a password.
     /// </summary>
+    /// <remarks>This exception indicates that the archive cannot be opened or processed because it is
+    /// protected by a password. Catch this exception to prompt the user for a password or to handle password-protected
+    /// archives appropriately.</remarks>
     public class ArchiveRequiresPasswordException : Exception
     {
         // 无参构造函数
@@ -32,8 +36,14 @@ namespace L4D2AddonInstaller_WinForms
     }
 
     /// <summary>
-    /// 解压缩文件（7z / zip / rar 等）
+    /// Provides helper methods for working with 7-Zip archives, including extraction, integrity validation, and
+    /// encryption detection using the 7z.exe command-line tool.
     /// </summary>
+    /// <remarks>This static class offers asynchronous methods to interact with 7-Zip archives by invoking the
+    /// external 7z.exe utility. It supports specifying custom 7z.exe paths, handling password-protected archives,
+    /// reporting extraction progress, and managing overwrite behaviors. All methods require 7z.exe to be available on
+    /// the system. Callers should ensure that the appropriate version of 7z.exe is present and accessible. Methods may
+    /// throw exceptions if the archive is invalid, the password is incorrect, or the operation is canceled.</remarks>
     public static class SevenZipHelper
     {
         /// <summary>
@@ -48,9 +58,13 @@ namespace L4D2AddonInstaller_WinForms
         }
 
         /// <summary>
-        /// 此方法返回默认的 7z.exe 路径（如果存在）
+        /// Gets the full path to the 7z.exe executable if it exists in a standard location.
         /// </summary>
-        /// <returns>7z.exe 的完整路径</returns>
+        /// <remarks>This method searches for 7z.exe in several common locations, including the
+        /// application's base directory, the current working directory, the Program Files directory, and a parent
+        /// project tools directory. The search order determines which path is returned if multiple copies
+        /// exist.</remarks>
+        /// <returns>A string containing the full path to 7z.exe if found in a known directory; otherwise, null.</returns>
         public static string Default7ZipFullPath() {
             var sevenZipPath = Path.Combine(
                 AppContext.BaseDirectory,
@@ -89,20 +103,56 @@ namespace L4D2AddonInstaller_WinForms
         }
 
         /// <summary>
-        /// 异步解压缩文件到指定目录。请先检查压缩包完整性(使用方法 ValidateArchiveAsync)。
+        /// 异步地将 7-Zip 归档文件的内容提取到指定的输出目录。
         /// </summary>
-        /// <param name="archivePath">压缩包路径</param>
-        /// <param name="outputDirectory">输出目录</param>
-        /// <param name="sevenZipExe">可选的 7z.exe 路径</param>
-        /// <param name="progress">进度条</param>
-        /// <param name="password">密码</param>
-        /// <param name="overwriteMode">覆盖模式</param>
-        /// <param name="cancellationToken">取消令牌</param>
-        /// <param name="includeFiles">筛选解压的文件</param>
-        /// <returns>表示解压缩已完成或出错的任务</returns>
-        /// <exception cref="FileNotFoundException">压缩文件不存在/7z.exe 路径无效</exception>
-        /// <exception cref="Exception">解压失败</exception>
-        /// <exception cref="OperationCanceledException">操作被终止。</exception>
+        /// <remarks>此方法使用 7-Zip 命令行工具执行提取操作。提取进度
+        /// 基于 7-Zip 的输出来报告，可能并非对所有归档类型都可用。该方法
+        /// 支持使用 includeFiles 参数从归档中提取特定的文件或匹配模式的文件。如果
+        /// 输出目录不存在，将会自动创建。此方法是线程安全的，并且可以等待。</remarks>
+        /// <param name="archivePath">要提取的 7-Zip 归档文件的完整路径。必须指向一个已存在的文件。</param>
+        /// <param name="outputDirectory">提取的文件将被放置的目录。如果该目录不存在，则会创建。</param>
+        /// <param name="sevenZipExe">用于提取操作的 7-Zip 可执行文件的完整路径。如果为 null 或为空，则使用
+        /// 默认的 7-Zip 路径。必须指向一个有效的 7-Zip 可执行文件。</param>
+        /// <param name="progress">一个可选的进度报告器，用于接收提取进度百分比（范围从 0 到 100）。如果不需要
+        /// 报告进度，可以为 null。</param>
+        /// <param name="password">用于提取加密归档文件的密码。如果为 null 或为空，则在没有密码的情况下
+        /// 进行提取。</param>
+        /// <param name="overwriteMode">指定如何处理输出目录中已存在的文件。决定在提取过程中是覆盖、跳过还是
+        /// 重命名文件。</param>
+        /// <param name="cancellationToken">可用于取消提取操作的取消令牌。</param>
+        /// <param name="includeFiles">一个可选的数组，包含要从归档中提取的文件名或匹配模式。如果未指定或为空，则提取
+        /// 所有文件。</param>
+        /// <returns>表示异步提取操作的任务。</returns>
+        /// <exception cref="FileNotFoundException">当 archivePath 指定的归档文件不存在，或者找不到有效的 7-Zip 可执行文件时抛出。</exception>
+        /// <exception cref="Exception">当提取过程失败或 7-Zip 进程返回非零退出代码时抛出。</exception>
+        /// <exception cref="OperationCanceledException">当提取操作通过 cancellationToken 被取消时抛出。</exception>
+        
+        /// <summary>
+        /// Extracts the contents of a 7-Zip archive to the specified output directory asynchronously.
+        /// </summary>
+        /// <remarks>This method uses the 7-Zip command-line tool to perform extraction. Extraction
+        /// progress is reported based on 7-Zip's output, and may not be available for all archive types. The method
+        /// supports extracting specific files or patterns from the archive using the includeFiles parameter. If the
+        /// output directory does not exist, it is created automatically. This method is thread-safe and can be
+        /// awaited.</remarks>
+        /// <param name="archivePath">The full path to the 7-Zip archive file to extract. Must refer to an existing file.</param>
+        /// <param name="outputDirectory">The directory where the extracted files will be placed. The directory is created if it does not exist.</param>
+        /// <param name="sevenZipExe">The full path to the 7-Zip executable to use for extraction. If null or empty, the default 7-Zip path is
+        /// used. Must refer to a valid 7-Zip executable.</param>
+        /// <param name="progress">An optional progress reporter that receives extraction progress as a percentage from 0 to 100. Can be null
+        /// if progress reporting is not required.</param>
+        /// <param name="password">The password to use for extracting encrypted archives. If null or empty, extraction proceeds without a
+        /// password.</param>
+        /// <param name="overwriteMode">Specifies how to handle existing files in the output directory. Determines whether to overwrite, skip, or
+        /// rename files during extraction.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the extraction operation.</param>
+        /// <param name="includeFiles">An optional array of file names or patterns to extract from the archive. If not specified or empty, all
+        /// files are extracted.</param>
+        /// <returns>A task that represents the asynchronous extraction operation.</returns>
+        /// <exception cref="FileNotFoundException">Thrown if the archive file specified by archivePath does not exist, or if a valid 7-Zip executable cannot be
+        /// found.</exception>
+        /// <exception cref="Exception">Thrown if the extraction process fails or the 7-Zip process returns a non-zero exit code.</exception>
+        /// <exception cref="OperationCanceledException">Thrown if the extraction operation is canceled via the cancellationToken.</exception>
         public static async Task ExtractAsync(
             string archivePath,
             string outputDirectory,
@@ -230,15 +280,25 @@ namespace L4D2AddonInstaller_WinForms
         }
 
         /// <summary>
-        /// 一个异步方法，用于验证压缩包的完整性。请先使用方法 IsArchiveEncryptedAsync 检测是否加密。
+        /// Validates the integrity of a 7z archive file using the 7-Zip command-line tool. Throws an exception if the
+        /// archive is corrupted, the password is incorrect, or the archive cannot be opened.
         /// </summary>
-        /// <param name="archivePath">压缩包的文件路径</param>
-        /// <param name="sevenZipExe">7z.exe 程序路径</param>
-        /// <param name="password">可选的压缩包密码</param>
-        /// <param name="cancellationToken">终止令牌</param>
-        /// <returns></returns>
-        /// <exception cref="Exception"></exception>
-        /// <exception cref="OperationCanceledException">操作被终止。</exception>
+        /// <remarks>This method uses the external 7-Zip tool to perform archive validation. The operation
+        /// runs asynchronously and may take time depending on the size of the archive. Ensure that the specified 7z.exe
+        /// is compatible with the archive format. The method does not extract the archive contents; it only checks for
+        /// integrity and password correctness.</remarks>
+        /// <param name="archivePath">The full path to the 7z archive file to validate. Cannot be null or empty.</param>
+        /// <param name="sevenZipExe">The path to the 7z.exe executable to use for validation. If null, defaults to a bundled 7z.exe in the
+        /// application's tools directory.</param>
+        /// <param name="password">The password to use for opening the archive. Specify an empty string if the archive is not
+        /// password-protected.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the validation operation.</param>
+        /// <returns>A task that represents the asynchronous validation operation.</returns>
+        /// <exception cref="FileNotFoundException">Thrown if the specified 7z.exe executable cannot be found.</exception>
+        /// <exception cref="ArchiveRequiresPasswordException">Thrown if the archive is encrypted and the provided password is incorrect or missing.</exception>
+        /// <exception cref="Exception">Thrown if the archive is corrupted or if an error occurs during validation that is not related to password
+        /// protection.</exception>
+        /// <exception cref="OperationCanceledException">Thrown if the operation is canceled via the provided cancellation token.</exception>
         public static async Task ValidateArchiveAsync(
             string archivePath, 
             string sevenZipExe, 
@@ -253,6 +313,8 @@ namespace L4D2AddonInstaller_WinForms
             var argsBuilder = new StringBuilder($"t \"{archivePath}\"");
             if (!string.IsNullOrEmpty(password))
                 argsBuilder.Append($" -p{password}");
+            else
+                argsBuilder.Append($" -p\"\"");
             string arguments = argsBuilder.ToString();
 
             var psi = new ProcessStartInfo
@@ -315,6 +377,8 @@ namespace L4D2AddonInstaller_WinForms
                 await ProcessHelper.WaitForExitAsync(process);
                 if (process.ExitCode != 0)
                 {
+                    if (errorBuilder.ToString().Contains("Cannot open encrypted archive. Wrong password?"))
+                        throw new ArchiveRequiresPasswordException();
                     throw new Exception($"压缩包已损坏或密码错误 (ExitCode={process.ExitCode})\n{errorBuilder}");
                 }
                 if (cancellationToken.IsCancellationRequested)
@@ -325,19 +389,25 @@ namespace L4D2AddonInstaller_WinForms
         }
 
         /// <summary>
-        /// 检测压缩包是否加密（核心：通过7z l -slt命令查找Encrypted = +标记）
+        /// Asynchronously determines whether the specified archive file is encrypted by invoking the 7-Zip command-line
+        /// tool.
         /// </summary>
-        /// <param name="archivePath">压缩包路径</param>
-        /// <param name="sevenZipExe">7z路径</param>
-        /// <param name="cancellationToken">取消令牌</param>
-        /// <returns>是否加密</returns>
+        /// <remarks>This method relies on the output of the specified 7-Zip executable to detect
+        /// encryption. Ensure that the provided 7-Zip version supports the required command-line options. The method
+        /// does not attempt to decrypt the archive; it only checks for the presence of encryption.</remarks>
+        /// <param name="archivePath">The full path to the archive file to check for encryption. This value cannot be null or empty.</param>
+        /// <param name="sevenZipExe">The full path to the 7-Zip executable to use for inspecting the archive. This value cannot be null or empty.</param>
+        /// <param name="cancellationToken">A cancellation token that can be used to cancel the operation.</param>
+        /// <returns>A task that represents the asynchronous operation. The task result is <see langword="true"/> if the archive
+        /// is encrypted; otherwise, <see langword="false"/>.</returns>
+        /// <exception cref="OperationCanceledException">Thrown if the operation is canceled via the <paramref name="cancellationToken"/> parameter.</exception>
         public static async Task<bool> IsArchiveEncryptedAsync(
             string archivePath,
             string sevenZipExe,
             CancellationToken cancellationToken)
         {
             // -l：列出内容，-slt：显示详细的技术信息，-ba：仅输出纯数据（屏蔽进度）
-            string arguments = $"l -slt -ba \"{archivePath}\"";
+            string arguments = $"l -slt -ba \"{archivePath}\" -p \"\"";
 
             var psi = new ProcessStartInfo
             {
@@ -369,6 +439,19 @@ namespace L4D2AddonInstaller_WinForms
                     if (data.StartsWith("Encrypted = +"))
                     {
                         isEncrypted = true;
+                    }
+                };
+
+                process.ErrorDataReceived += (_, e) =>
+                {
+                    if (!string.IsNullOrEmpty(e.Data))
+                    {
+                        Debug.WriteLine($"7z加密检测错误日志: {e.Data}");
+                        var data = e.Data.Trim();
+                        if (data.StartsWith("Cannot open encrypted archive. Wrong password?"))
+                        {
+                            isEncrypted = true;
+                        }
                     }
                 };
 

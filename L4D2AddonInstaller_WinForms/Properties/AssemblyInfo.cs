@@ -1,4 +1,5 @@
-﻿using System.Reflection;
+﻿using System.Resources;
+using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 
@@ -29,5 +30,6 @@ using System.Runtime.InteropServices;
 //      生成号
 //      修订号
 //
-[assembly: AssemblyVersion("1.2.21.11")]
-[assembly: AssemblyFileVersion("1.2.21.11")]
+[assembly: AssemblyVersion("1.3.2.2")]
+[assembly: AssemblyFileVersion("1.3.2.2")]
+[assembly: NeutralResourcesLanguage("")]
