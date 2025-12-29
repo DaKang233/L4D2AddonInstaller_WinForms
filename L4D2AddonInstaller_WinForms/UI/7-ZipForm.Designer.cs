@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller_WinForms
+﻿namespace L4D2AddonInstaller
 {
     partial class SevenZipForm
     {
@@ -56,6 +56,7 @@
             this.radioBtnRenameNewer = new System.Windows.Forms.RadioButton();
             this.radioBtnSkipExisting = new System.Windows.Forms.RadioButton();
             this.radioBtnOverwriteAll = new System.Windows.Forms.RadioButton();
+            this.buttonDownload7Zip = new System.Windows.Forms.Button();
             this.groupBoxExtraOptions.SuspendLayout();
             this.SuspendLayout();
             // 
@@ -349,11 +350,24 @@
             this.radioBtnOverwriteAll.Text = "覆盖全部";
             this.radioBtnOverwriteAll.UseVisualStyleBackColor = true;
             // 
+            // buttonDownload7Zip
+            // 
+            this.buttonDownload7Zip.Font = new System.Drawing.Font("微软雅黑", 10.5F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(134)));
+            this.buttonDownload7Zip.Location = new System.Drawing.Point(387, 13);
+            this.buttonDownload7Zip.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
+            this.buttonDownload7Zip.Name = "buttonDownload7Zip";
+            this.buttonDownload7Zip.Size = new System.Drawing.Size(88, 30);
+            this.buttonDownload7Zip.TabIndex = 21;
+            this.buttonDownload7Zip.Text = "下载 7-Zip";
+            this.buttonDownload7Zip.UseVisualStyleBackColor = true;
+            this.buttonDownload7Zip.Click += new System.EventHandler(this.buttonDownload7Zip_Click);
+            // 
             // SevenZipForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(602, 362);
+            this.Controls.Add(this.buttonDownload7Zip);
             this.Controls.Add(this.groupBoxExtraOptions);
             this.Controls.Add(this.buttonOpenOutputDir);
             this.Controls.Add(this.buttonOutputDirDetect);
@@ -418,5 +432,6 @@
         private System.Windows.Forms.TextBox textBoxPassword;
         private System.Windows.Forms.Label labelIncludeFiles;
         private System.Windows.Forms.TextBox textBoxIncludeFiles;
+        private System.Windows.Forms.Button buttonDownload7Zip;
     }
 }

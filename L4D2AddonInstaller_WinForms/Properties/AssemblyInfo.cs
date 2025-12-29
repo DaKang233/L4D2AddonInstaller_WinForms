@@ -10,7 +10,7 @@ using System.Runtime.InteropServices;
 [assembly: AssemblyDescription("An application that helps user to install add-ons from Left 4 Dead 2.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("DaKang233")]
-[assembly: AssemblyProduct("L4D2AddonInstaller_WinForms")]
+[assembly: AssemblyProduct("L4D2AddonInstaller")]
 [assembly: AssemblyCopyright("Copyright © 2025 DaKang233.")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
@@ -30,6 +30,6 @@ using System.Runtime.InteropServices;
 //      生成号
 //      修订号
 //
-[assembly: AssemblyVersion("1.3.2.2")]
-[assembly: AssemblyFileVersion("1.3.2.2")]
+[assembly: AssemblyVersion("1.3.3.2")]
+[assembly: AssemblyFileVersion("1.3.3.2")]
 [assembly: NeutralResourcesLanguage("")]

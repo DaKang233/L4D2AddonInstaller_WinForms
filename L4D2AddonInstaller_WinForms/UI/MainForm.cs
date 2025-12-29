@@ -9,8 +9,10 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using L4D2AddonInstaller.Parser;
+using L4D2AddonInstaller.Helper;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller
 {
     public partial class MainForm : Form
     {
@@ -263,7 +265,7 @@ namespace L4D2AddonInstaller_WinForms
                     return;
                 }
 
-                string l4d2LibraryPath = SteamLibraryVdfParser.GetLibraryPathByGameId(libraryVdfPath, "550");
+                string l4d2LibraryPath = Parser.SteamLibraryVdfParser.GetLibraryPathByGameId(libraryVdfPath, "550");
                 if (string.IsNullOrEmpty(l4d2LibraryPath))
                 {
                     MessageBox.Show("未找到 L4D2 的安装路径，请确认游戏已安装到该 Steam 库。", "提示",

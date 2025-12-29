@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller_WinForms
+﻿namespace L4D2AddonInstaller
 {
     partial class MainForm
     {

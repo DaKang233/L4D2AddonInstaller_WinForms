@@ -5,7 +5,7 @@ using System.Text;
 using System.Windows.Forms;
 using System.Threading.Tasks;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller
 {
     /// <summary>
     /// 通用工具类

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller
 {
     internal static class Program
     {

@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller.Parser
 {
     /// <summary>
     /// 从libraryfolders.vdf文件中解析指定游戏ID对应的Steam库根路径（path字段）。

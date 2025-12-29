@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller
 {
     public partial class AboutForm : Form
     {

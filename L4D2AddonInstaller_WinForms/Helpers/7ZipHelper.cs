@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller.Helper
 {
     /// <summary>
     /// The exception that is thrown when an operation requires a password-protected archive to be accessed without
@@ -101,6 +101,44 @@ namespace L4D2AddonInstaller_WinForms
                 return null;
             }
         }
+
+        /// <summary>
+        /// 异步下载 7z.exe 和 7z.dll
+        /// </summary>
+        public static async Task Download7ZipExe(CancellationToken cancellationToken, IProgress<int> progress = null)
+        {
+            var sevenZipExeUrl = "https://furina.dakang233.com:8443/www/tools/7z.exe";
+            var sevenZipDllUrl = "https://furina.dakang233.com:8443/www/tools/7z.dll";
+            Uri sevenZipExeFinalUri = new Uri( sevenZipExeUrl );
+            Uri sevenZipDllFinalUri = new Uri( sevenZipDllUrl );
+
+            var sevenZipPath = Path.Combine(AppContext.BaseDirectory, "tools");
+            Directory.CreateDirectory(sevenZipPath);
+
+            if (File.Exists(Path.Combine(AppContext.BaseDirectory,"tools","7z.exe")) || File.Exists(Path.Combine(AppContext.BaseDirectory, "tools", "7z.dll")))
+            {
+                File.Delete(Path.Combine(AppContext.BaseDirectory, "tools", "7z.exe"));
+                File.Delete(Path.Combine(AppContext.BaseDirectory, "tools", "7z.dll"));
+            }
+            try
+            {
+                var progress1 = new Progress<int>(p =>
+                {
+                    progress?.Report(p * 23 / 100);
+                });
+                var progress2 = new Progress<int>(p =>
+                {
+                    progress?.Report(p * 77 / 100 + 23);
+                });
+                await HttpHelper.DownloadFileAsync(sevenZipExeUrl, Path.Combine(sevenZipPath, "7z.exe"), cancellationToken, progress1);
+                await HttpHelper.DownloadFileAsync(sevenZipDllUrl, Path.Combine(sevenZipPath, "7z.dll"), cancellationToken, progress2);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+        
 
         /// <summary>
         /// 异步地将 7-Zip 归档文件的内容提取到指定的输出目录。

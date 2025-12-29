@@ -6,7 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller.Helper
 {
     /// <summary>
     /// 进程相关操作

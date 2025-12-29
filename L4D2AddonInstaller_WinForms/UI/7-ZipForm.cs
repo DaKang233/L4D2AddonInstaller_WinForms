@@ -11,10 +11,11 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
-using static L4D2AddonInstaller_WinForms.MainForm;
-using static L4D2AddonInstaller_WinForms.SevenZipHelper;
+using static L4D2AddonInstaller.MainForm;
+using static L4D2AddonInstaller.Helper.SevenZipHelper;
+using L4D2AddonInstaller.Helper;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller
 {
     /// <summary>
     /// Represents a Windows Form that provides a graphical interface for extracting archive files using 7-Zip. Allows
@@ -62,6 +63,7 @@ namespace L4D2AddonInstaller_WinForms
             }
         }
         public event EventHandler<bool> ExtractionCompleted;
+        public event EventHandler<bool> Download7ZipCompleted;
 
 
 
@@ -80,7 +82,26 @@ namespace L4D2AddonInstaller_WinForms
         protected override void OnShown(EventArgs e)
         {
             if (_request != null && _request.IsAutoExtract)
-                buttonStart.PerformClick();
+            {
+                if (!string.IsNullOrEmpty(_request.SevenZipPath) && System.IO.File.Exists(_request.SevenZipPath))
+                    buttonStart.PerformClick();
+                else
+                {
+                    buttonDownload7Zip.PerformClick();
+                    Download7ZipCompleted += (s, success) =>
+                    {
+                        if (success)
+                        {
+                            buttonStart.PerformClick();
+                        }
+                        else
+                        {
+                            MessageBox.Show("一键操作失败：无法找到可用的 7-Zip 程序且下载 7-Zip 失败。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                            RecoverUIAfter7ZipOperation(null);
+                        }
+                    };
+                }
+            }
             base.OnShown(e);
         }
 
@@ -113,11 +134,18 @@ namespace L4D2AddonInstaller_WinForms
 
         private void button7ZipPathDetect_Click(object sender, EventArgs e)
         {
-            textBox7ZipPath.Text = SevenZipHelper.Default7ZipFullPath();
+            textBox7ZipPath.Text = Default7ZipFullPath();
             if (string.IsNullOrEmpty(textBox7ZipPath.Text))
             {
-                MessageBox.Show("未找到 7z.exe 文件。请手动选择。", "信息", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
+                DialogResult result = MessageBox.Show("未在本地计算机上找到有效的 7-Zip 程序。是否尝试让程序下载？", "提示", MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+                if (result == DialogResult.Yes)
+                {
+                    buttonDownload7Zip.PerformClick();
+                }
+                else
+                {
+                    return;
+                }
             }
         }
 
@@ -169,12 +197,13 @@ namespace L4D2AddonInstaller_WinForms
         }
 
         // 本地函数：恢复 UI 状态（只能在最外层调用）
-        void RecoverUIAfterOperation(string StatusText)
+        void RecoverUIAfter7ZipOperation(string StatusText)
         {
             if (!string.IsNullOrEmpty(StatusText))
                 labelStatus.Text = StatusText;
             buttonCancel.Enabled = false;
             buttonStart.Enabled = true;
+            buttonDownload7Zip.Enabled = true;
             _cts?.Dispose();
         }
 
@@ -216,6 +245,7 @@ namespace L4D2AddonInstaller_WinForms
             _cts = new CancellationTokenSource();
             var cancellationToken = _cts.Token;
             bool success = false;
+            buttonDownload7Zip.Enabled = false;
 
             int archiveCount = archives.Length;
             try
@@ -247,27 +277,27 @@ namespace L4D2AddonInstaller_WinForms
             catch (OperationCanceledException)
             {
                 MessageBox.Show("加密检验操作已被取消。", "已取消", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                RecoverUIAfterOperation("解压已取消。");
+                RecoverUIAfter7ZipOperation("解压已取消。");
                 ExtractionCompleted?.Invoke(this, false);
                 return;
             }
             catch (ArchiveRequiresPasswordException)
             {
                 MessageBox.Show("该压缩包需要密码才能解压。请在密码框中输入正确的密码后重试。", "需要密码", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                RecoverUIAfterOperation("解压失败，压缩包需要密码。");
+                RecoverUIAfter7ZipOperation("解压失败，压缩包需要密码。");
                 ExtractionCompleted?.Invoke(this, false);
                 return;
             }
             catch (Exception ex)
             {
                 MessageBox.Show("解压过程中发生错误：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                RecoverUIAfterOperation("解压失败，发生错误。");
+                RecoverUIAfter7ZipOperation("解压失败，发生错误。");
                 ExtractionCompleted?.Invoke(this, false);
                 return;
             }
             finally
             {
-                if (success) RecoverUIAfterOperation($"全部压缩包（共 {archiveCount} 个）已解压到指定目录。");
+                if (success) RecoverUIAfter7ZipOperation($"全部压缩包（共 {archiveCount} 个）已解压到指定目录。");
             }
         }
 
@@ -356,6 +386,53 @@ namespace L4D2AddonInstaller_WinForms
                 _cts.Cancel();
                 labelStatus.Text = "正在终止解压...";
                 buttonCancel.Enabled = false; // 防止重复点击
+            }
+        }
+
+        private async void buttonDownload7Zip_Click(object sender, EventArgs e)
+        {
+            _cts = new CancellationTokenSource();
+            var cancellationToken = _cts.Token;
+            progressBarCompression.Value = 0;
+            buttonDownload7Zip.Enabled = false;
+            buttonCancel.Enabled = true;
+            buttonStart.Enabled = false;
+            labelStatus.Text = "准备开始下载 7-Zip...";
+            labelPercent.Text = "0%";
+            var progress = new Progress<int>(p =>
+            {
+                progressBarCompression.Value = Math.Min(p, 100);
+                labelPercent.Text = $"{p}%";
+                if (progressBarCompression.Value == 100)
+                {
+                    labelStatus.Text = "7-Zip 下载完成。";
+                }
+                if (progressBarCompression.Value <= 23)
+                {
+                    labelStatus.Text = "正在下载 7z.exe...";
+                }
+                if (progressBarCompression.Value > 23 && progressBarCompression.Value < 100)
+                {
+                    labelStatus.Text = "正在下载 7z.dll...";
+                }
+            });
+            try
+            {
+                await Download7ZipExe(cancellationToken, progress);
+                Download7ZipCompleted?.Invoke(this, true);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("下载 7-Zip 失败："+ ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                labelStatus.Text = "下载 7-Zip 失败。";
+                Download7ZipCompleted?.Invoke(this, false);
+            }
+            finally
+            {
+                _cts.Dispose();
+                buttonDownload7Zip.Enabled = true;
+                buttonCancel.Enabled = false;
+                buttonStart.Enabled = true;
             }
         }
     }

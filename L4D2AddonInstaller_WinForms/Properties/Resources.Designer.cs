@@ -8,7 +8,7 @@
 // </auto-generated>
 //------------------------------------------------------------------------------
 
-namespace L4D2AddonInstaller_WinForms.Properties {
+namespace L4D2AddonInstaller.Properties {
     using System;
     
     

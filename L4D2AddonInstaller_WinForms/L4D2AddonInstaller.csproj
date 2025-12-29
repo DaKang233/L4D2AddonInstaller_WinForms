@@ -50,7 +50,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <PropertyGroup>
-    <ApplicationIcon>shell32_00123.ico</ApplicationIcon>
+    <ApplicationIcon>Assets\shell32_00123.ico</ApplicationIcon>
   </PropertyGroup>
   <PropertyGroup>
     <SignManifests>false</SignManifests>
@@ -92,35 +92,35 @@
     <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AboutForm.cs">
+    <Compile Include="UI\AboutForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="AboutForm.Designer.cs">
+    <Compile Include="UI\AboutForm.Designer.cs">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="ProcessHelper.cs" />
-    <Compile Include="MainForm.cs">
+    <Compile Include="Helpers\ProcessHelper.cs" />
+    <Compile Include="UI\MainForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="MainForm.Designer.cs">
+    <Compile Include="UI\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="HttpHelper.cs" />
+    <Compile Include="Helpers\HttpHelper.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="7ZipHelper.cs" />
-    <Compile Include="SteamLibraryVdfParser.cs" />
-    <Compile Include="7-ZipForm.cs">
+    <Compile Include="Helpers\7ZipHelper.cs" />
+    <Compile Include="Parsers\SteamLibraryVdfParser.cs" />
+    <Compile Include="UI\7-ZipForm.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="7-ZipForm.Designer.cs">
+    <Compile Include="UI\7-ZipForm.Designer.cs">
       <DependentUpon>7-ZipForm.cs</DependentUpon>
     </Compile>
     <Compile Include="Universal.cs" />
-    <EmbeddedResource Include="AboutForm.resx">
+    <EmbeddedResource Include="UI\AboutForm.resx">
       <DependentUpon>AboutForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="MainForm.resx">
+    <EmbeddedResource Include="UI\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
@@ -133,7 +133,7 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
-    <EmbeddedResource Include="7-ZipForm.resx">
+    <EmbeddedResource Include="UI\7-ZipForm.resx">
       <DependentUpon>7-ZipForm.cs</DependentUpon>
     </EmbeddedResource>
     <None Include="packages.config" />
@@ -164,7 +164,7 @@
     </BootstrapperPackage>
   </ItemGroup>
   <ItemGroup>
-    <None Include="shell32_00123.ico" />
+    <None Include="Assets\shell32_00123.ico" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="tools\7z.dll">
@@ -177,5 +177,6 @@
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
   </ItemGroup>
+  <ItemGroup />
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

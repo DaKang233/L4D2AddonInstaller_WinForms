@@ -6,7 +6,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
-namespace L4D2AddonInstaller_WinForms
+namespace L4D2AddonInstaller.Helper
 {
     /// <summary>
     /// HTTPS请求工具类（处理ZeroSSL证书，获取远程文件）
@@ -142,5 +142,63 @@ namespace L4D2AddonInstaller_WinForms
             }
         }
 
+        /// <summary>
+        /// 异步下载文件，并实时报告已下载的字节数
+        /// </summary>
+        /// <param name="url">下载地址</param>
+        /// <param name="filePath">本地保存路径</param>
+        /// <param name="cancellationToken">取消令牌</param>
+        /// <param name="progress">用于报告已下载的字节数</param>
+        public static async Task DownloadFileAsyncWithByteProgress(
+            string url,
+            string filePath,
+            CancellationToken cancellationToken,
+            IProgress<long> progress = null)
+        {
+            CancellationTokenRegistration ctr = default;
+            
+            try {
+                var response = await _httpClient.GetAsync(
+                    url,
+                    HttpCompletionOption.ResponseHeadersRead,
+                    cancellationToken);
+                response.EnsureSuccessStatusCode();
+
+                ctr = cancellationToken.Register(() =>
+                {
+                    try { response?.Dispose(); } catch { }
+                });
+
+                var buffer = new byte[8192];
+                long bytesDownloaded = 0;
+
+                using (var stream = await response.Content.ReadAsStreamAsync())
+                using (var fileStream = new FileStream(filePath, FileMode.Create, FileAccess.Write, FileShare.None, 4096, true))
+                {
+                    int bytesRead;
+                    Directory.CreateDirectory(Path.GetDirectoryName(filePath));
+                    while ((bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken)) > 0)
+                    {
+                        cancellationToken.ThrowIfCancellationRequested();
+                        await fileStream.WriteAsync(buffer, 0, bytesRead, cancellationToken);
+                        bytesDownloaded += bytesRead;
+
+                        // 报告已下载的字节数
+                        progress?.Report(bytesDownloaded);
+                    }
+                }
+            }
+            catch (ObjectDisposedException) 
+            {
+                if (File.Exists(filePath)) File.Delete(filePath);
+                throw new OperationCanceledException(cancellationToken);
+            }
+            catch (OperationCanceledException) 
+            {
+                if (File.Exists(filePath)) File.Delete(filePath);
+                throw;
+            }
+            catch (Exception ex) { throw new Exception("下载文件失败：", ex); }
+        }
     }
 }
