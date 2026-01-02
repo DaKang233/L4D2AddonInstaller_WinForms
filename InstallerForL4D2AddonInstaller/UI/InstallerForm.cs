@@ -65,6 +65,22 @@ namespace InstallerForL4D2AddonInstaller
             {
                 StepIndexIncrement();
             };
+            installPathStep.BtnNextEvent += (s, args) =>
+            {
+                if (args.EnableNext)
+                {
+                    btnNext.Enabled = true;
+                    VersionsLoaded = true;
+                }
+                else
+                    btnNext.Enabled = false;
+            };
+
+            installLicense.AgreementCheckedChanged += (s, agreed) =>
+            {
+                btnNext.Enabled = agreed;
+                AgreementChecked = agreed;
+            };
         }
 
         bool VersionsLoaded = false;
@@ -95,23 +111,6 @@ namespace InstallerForL4D2AddonInstaller
                 {
                     btnNext.Text = "下一步";
                 }
-
-                installPathStep.BtnNextEvent += (s, args) =>
-                {
-                    if (args.EnableNext)
-                    {
-                        btnNext.Enabled = true;
-                        VersionsLoaded = true;
-                    }
-                    else
-                        btnNext.Enabled = false;
-                };
-
-                installLicense.AgreementCheckedChanged += (s, agreed) =>
-                {
-                    btnNext.Enabled = agreed;
-                    AgreementChecked = agreed;
-                };
                 if (step.Name == "InstallLicense")
                     btnNext.Enabled = AgreementChecked;
 
