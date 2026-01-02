@@ -9,7 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace L4D2AddonInstaller.Helper
+namespace InstallerForL4D2AddonInstaller.Helper
 {
     /// <summary>
     /// HTTPS请求工具类（处理ZeroSSL证书，获取远程文件）
@@ -159,8 +159,9 @@ namespace L4D2AddonInstaller.Helper
             IProgress<long> progress = null)
         {
             CancellationTokenRegistration ctr = default;
-            
-            try {
+
+            try
+            {
                 var response = await _httpClient.GetAsync(
                     url,
                     HttpCompletionOption.ResponseHeadersRead,
@@ -191,12 +192,12 @@ namespace L4D2AddonInstaller.Helper
                     }
                 }
             }
-            catch (ObjectDisposedException) 
+            catch (ObjectDisposedException)
             {
                 if (File.Exists(filePath)) File.Delete(filePath);
                 throw new OperationCanceledException(cancellationToken);
             }
-            catch (OperationCanceledException) 
+            catch (OperationCanceledException)
             {
                 if (File.Exists(filePath)) File.Delete(filePath);
                 throw;
@@ -252,7 +253,7 @@ namespace L4D2AddonInstaller.Helper
             {
                 baseUri = new Uri($"{protocol}://{webServer}:{webPort}/");
             }
-            catch (UriFormatException ex) { throw new ArgumentException("Base URL 格式错误：",ex); }
+            catch (UriFormatException ex) { throw new ArgumentException("Base URL 格式错误：", ex); }
 
             var normalizedPrefix = (prefix ?? string.Empty).Trim().Trim('/');
             foreach (var path in downloadRelativePaths)
@@ -286,7 +287,7 @@ namespace L4D2AddonInstaller.Helper
                         skipped.Add(p);
                         continue;
                     }
-                    
+
                     var savePathSingle = Path.Combine(savePath, fileName);
                     downloadItems.Add(new DownloadItem
                     {
@@ -599,6 +600,12 @@ namespace L4D2AddonInstaller.Helper
 
             // 返回保留两位小数的结果
             return (Math.Round(size, 2), units[unitIndex]);
+        }
+
+        public static string GetBytesUnitString(long byteCount)
+        {
+            var (value, unit) = BytesToUnit(byteCount);
+            return $"{value:F2} {unit}";
         }
     }
 }

@@ -1,3 +1,7 @@
 <Solution>
+  <Folder Name="/解决方案项/">
+    <File Path="LICENSE" />
+  </Folder>
+  <Project Path="InstallerForL4D2AddonInstaller/InstallerForL4D2AddonInstaller.csproj" Id="21101776-a831-490a-af86-07f8f0503acb" />
   <Project Path="L4D2AddonInstaller_WinForms/L4D2AddonInstaller.csproj" Id="0ec99d3c-fe1b-41f2-8791-1ac72d19b58f" />
 </Solution>

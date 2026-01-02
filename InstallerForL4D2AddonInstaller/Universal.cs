@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace L4D2AddonInstaller
+namespace InstallerForL4D2AddonInstaller
 {
     /// <summary>
     /// 通用工具类
