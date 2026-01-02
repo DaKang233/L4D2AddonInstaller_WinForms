@@ -150,6 +150,7 @@ namespace InstallerForL4D2AddonInstaller
                 installerForm.Close();
                 return;
             }
+            progressBar.Value = 100;
             labelStatus.Text = "安装完成。";
             InstallationCompleted?.Invoke(this, true);
         }
