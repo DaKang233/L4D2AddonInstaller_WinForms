@@ -159,7 +159,7 @@ namespace L4D2AddonInstaller
         /// <param name="e">An EventArgs object that contains the event data.</param>
         private void buttonOutputDirDetect_Click(object sender, EventArgs e)
         {
-            var gamePath = MainForm.OutputDirPath;
+            var gamePath = MainForm.GamePath;
             if (string.IsNullOrEmpty(gamePath) || !File.Exists(Path.Combine(gamePath,"left4dead2.exe")))
             {
                 MessageBox.Show("请先指定有效的游戏目录路径。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);

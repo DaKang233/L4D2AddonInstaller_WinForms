@@ -38,7 +38,7 @@ namespace L4D2AddonInstaller
         public static string ArchivePath = "";
         public static string OutputDirPath = "";
         public static string SevenZipPath = "";
-
+        public static string GamePath = "";
         /// <summary>
         /// Represents a request to extract files from one or more 7-Zip archives.
         /// </summary>
@@ -58,7 +58,7 @@ namespace L4D2AddonInstaller
             /// <summary>
             /// 7-Zip可执行文件路径
             /// </summary>
-            public string SevenZipPath { get; set; } 
+            public string SevenZipPath { get; set; }
             /// <summary>
             /// 是否自动解压
             /// </summary>
@@ -96,7 +96,8 @@ namespace L4D2AddonInstaller
                 MessageBoxButtons.OKCancel, MessageBoxIcon.Information);
             if (result == DialogResult.OK)
                 base.OnFormClosing(e);
-            else { this.Show(); e.Cancel = true; }; // 取消关闭，继续显示窗口
+            else { this.Show(); e.Cancel = true; }
+            ; // 取消关闭，继续显示窗口
         }
 
         /// <summary>
@@ -355,7 +356,7 @@ namespace L4D2AddonInstaller
             textBoxServerInfo.Text = "";
             textBoxConsoleCmd.Text = "";
             labelDownloadPercent.Text = "0%";
-            InstallationFinished?.Invoke(this,false);
+            InstallationFinished?.Invoke(this, false);
             _cts = new CancellationTokenSource();
             var cancellationToken = _cts.Token;
 
@@ -504,7 +505,7 @@ namespace L4D2AddonInstaller
                     {
                         double progressValue = (downloadedFiles * 100.0 + percent) / totalFiles;
                         pbDownloadProgress.Value = (int)Math.Min(progressValue, 100); // 确保进度条的值不超过100
-                        labelDownloadPercent.Text = Math.Round(Math.Min(progressValue, 100.0),2).ToString()+"%";
+                        labelDownloadPercent.Text = Math.Round(Math.Min(progressValue, 100.0), 2).ToString() + "%";
                         lblDownloadStatus.Text = $"正在下载第 {downloadedFiles + 1}/{totalFiles} 个文件: {filename} ...";
                     }
                     catch (Exception ex) { Debug.WriteLine($"更新进度条时出错：{ex}"); }
@@ -557,7 +558,8 @@ namespace L4D2AddonInstaller
                 // 等待所有任务完成（若有失败，Task.WhenAll 会抛出聚合异常）
                 await Task.WhenAll(tasks);
 
-                if (cancellationToken.IsCancellationRequested) {
+                if (cancellationToken.IsCancellationRequested)
+                {
                     buttonCancel.Enabled = false;
                     _cts.Dispose();
                     return;
@@ -566,7 +568,7 @@ namespace L4D2AddonInstaller
                 // 9. 下载完成处理
                 if (!IsAutoExtract) lblDownloadStatus.Text = "所有附加组件下载并安装完成！";
                 else lblDownloadStatus.Text = "所有附加组件已下载；检测到压缩包(尚未解压)。";
-                    pbDownloadProgress.Value = 100;
+                pbDownloadProgress.Value = 100;
                 if (!IsOneClickAction)
                     MessageBox.Show("附加组件下载安装完成！", "成功", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
@@ -579,7 +581,8 @@ namespace L4D2AddonInstaller
                     else dialogResult = DialogResult.OK;
                 if (dialogResult == DialogResult.OK)
                 {
-                    try {
+                    try
+                    {
                         if (Directory.Exists(Path.Combine(textBox1GamePath.Text.Trim(), "l4d2InstallToolDownloads")))
                         {
                             var downloadedArchives = Directory.GetFiles(
@@ -600,7 +603,6 @@ namespace L4D2AddonInstaller
                                     OutputDirPath = Path.Combine(textBox1GamePath.Text.Trim(), "left4dead2", "addons"),
                                     SevenZipPath = SevenZipHelper.Default7ZipFullPath(),
                                     IsAutoExtract = true,
-                                    IncludeFiles = "*.vpk"
                                 };
 
                                 using (var form = new SevenZipForm(request))
@@ -638,7 +640,7 @@ namespace L4D2AddonInstaller
             finally
             {
                 // 恢复按钮状态
-                InstallationFinished?.Invoke(this,true);
+                InstallationFinished?.Invoke(this, true);
                 btnCodeName.Enabled = true;
                 buttonCancel.Enabled = false;
                 _cts.Dispose();
@@ -820,7 +822,7 @@ namespace L4D2AddonInstaller
             {
                 if (string.IsNullOrEmpty(textBox3CodeName.Text))
                 {
-                    MessageBox.Show("请先在下载区域输入下载代号（如1、231）", "提示", 
+                    MessageBox.Show("请先在下载区域输入下载代号（如1、231）", "提示",
                         MessageBoxButtons.OK, MessageBoxIcon.Information);
                     btnOneClickFinishAll.Enabled = true;
                     return;
@@ -829,7 +831,8 @@ namespace L4D2AddonInstaller
                 btnDetectAllPath_Click(sender, e);
                 btnCodeName_Click(sender, e);
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 MessageBox.Show($"一键完成操作失败：{ex.Message}", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 IsOneClickAction = false;
                 btnOneClickFinishAll.Enabled = true;
@@ -854,6 +857,7 @@ namespace L4D2AddonInstaller
         /// <param name="e"></param>
         private void btn7ZipForm_Click(object sender, EventArgs e)
         {
+            GamePath = textBox1GamePath.Text.Trim();
             using (SevenZipForm sevenZipForm = new SevenZipForm())
             {
                 sevenZipForm.ShowDialog();
