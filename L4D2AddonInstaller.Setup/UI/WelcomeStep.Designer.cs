@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller
+namespace L4D2AddonInstaller
 {
     partial class WelcomeStep
     {
@@ -90,3 +90,4 @@
         private System.Windows.Forms.Label label3;
     }
 }
+

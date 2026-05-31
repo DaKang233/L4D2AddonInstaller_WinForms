@@ -7,3 +7,4 @@ public static class Win32Interop
 {
     public static IntPtr GetWindowHandle(Microsoft.UI.Xaml.Window window) => WindowNative.GetWindowHandle(window);
 }
+

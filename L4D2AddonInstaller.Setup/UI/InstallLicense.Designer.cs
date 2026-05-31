@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller.UI
+namespace L4D2AddonInstaller.UI
 {
     partial class InstallLicense
     {
@@ -103,3 +103,4 @@
         private System.Windows.Forms.CheckBox checkBoxAgreement;
     }
 }
+

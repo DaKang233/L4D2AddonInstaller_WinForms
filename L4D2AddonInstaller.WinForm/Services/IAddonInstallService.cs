@@ -11,3 +11,4 @@ namespace L4D2AddonInstaller.Services
         Task<AddonInstallProgressInfo> DownloadAndInstallAsync(string code, string gamePath, IProgress<AddonInstallProgressInfo> progress, CancellationToken cancellationToken);
     }
 }
+

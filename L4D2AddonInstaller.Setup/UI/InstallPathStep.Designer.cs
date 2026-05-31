@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller
+namespace L4D2AddonInstaller
 {
     partial class InstallPathStep
     {
@@ -149,3 +149,4 @@
         private System.Windows.Forms.Button buttonReload;
     }
 }
+

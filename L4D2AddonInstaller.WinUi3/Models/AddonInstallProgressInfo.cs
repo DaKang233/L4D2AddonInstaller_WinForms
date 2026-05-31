@@ -22,3 +22,4 @@ public sealed class AddonInstallProgressInfo
     public IReadOnlyList<string> DownloadedArchivePaths { get; set; } = [];
     public bool IsCompleted { get; set; }
 }
+

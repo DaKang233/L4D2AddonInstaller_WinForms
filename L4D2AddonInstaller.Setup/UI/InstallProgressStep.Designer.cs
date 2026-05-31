@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller
+namespace L4D2AddonInstaller
 {
     partial class InstallProgressStep
     {
@@ -108,3 +108,4 @@
         private System.Windows.Forms.Label labelSpeed;
     }
 }
+

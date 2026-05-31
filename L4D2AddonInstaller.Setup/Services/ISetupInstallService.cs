@@ -10,3 +10,4 @@ namespace L4D2AddonInstaller.Services
         Task InstallAsync(string installRootPath, VersionDetails versionDetails, IProgress<SetupInstallProgressInfo> progress, CancellationToken cancellationToken);
     }
 }
+

@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller
+namespace L4D2AddonInstaller
 {
     partial class InstallerForm
     {
@@ -106,4 +106,5 @@
         public System.Windows.Forms.Button btnNext;
     }
 }
+
 

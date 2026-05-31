@@ -21,3 +21,4 @@ namespace L4D2AddonInstaller.Services
         public bool IsCompleted { get; set; }
     }
 }
+

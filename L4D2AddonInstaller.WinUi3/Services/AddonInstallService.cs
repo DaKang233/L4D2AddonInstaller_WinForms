@@ -119,3 +119,4 @@ public sealed class AddonInstallService
         };
     }
 }
+

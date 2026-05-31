@@ -1,4 +1,4 @@
-﻿using L4D2AddonInstaller.Helpers;
+using L4D2AddonInstaller.Helpers;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -148,3 +148,4 @@ DLL: {v.SevenZipDllPath}*/
         }
     }
 }
+

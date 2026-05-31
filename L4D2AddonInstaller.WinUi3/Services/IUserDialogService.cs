@@ -9,3 +9,4 @@ public interface IUserDialogService
     Task ShowErrorAsync(string title, string message);
     Task<bool> ConfirmAsync(string title, string message, string primaryButtonText = "确定");
 }
+

@@ -1,4 +1,4 @@
-﻿using L4D2AddonInstaller.Services;
+using L4D2AddonInstaller.Services;
 using System;
 using System.IO;
 using System.Threading;
@@ -104,3 +104,4 @@ namespace L4D2AddonInstaller
         }
     }
 }
+

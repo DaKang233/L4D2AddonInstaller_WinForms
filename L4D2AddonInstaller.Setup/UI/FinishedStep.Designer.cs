@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller.UI
+namespace L4D2AddonInstaller.UI
 {
     partial class FinishedStep
     {
@@ -106,3 +106,4 @@
         private System.Windows.Forms.CheckBox checkBoxCreateShortcut;
     }
 }
+

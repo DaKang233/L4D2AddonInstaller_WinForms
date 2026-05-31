@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 
@@ -83,3 +83,4 @@ namespace L4D2AddonInstaller
         }
     }
 }
+

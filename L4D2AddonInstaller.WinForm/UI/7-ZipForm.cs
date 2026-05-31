@@ -1,4 +1,4 @@
-﻿using L4D2AddonInstaller.Helpers;
+using L4D2AddonInstaller.Helpers;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -434,3 +434,4 @@ namespace L4D2AddonInstaller
         }
     }
 }
+

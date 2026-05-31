@@ -7,3 +7,4 @@ public interface IFileDialogService
     Task<string[]?> PickArchivesAsync();
     Task<string?> PickSevenZipExeAsync();
 }
+

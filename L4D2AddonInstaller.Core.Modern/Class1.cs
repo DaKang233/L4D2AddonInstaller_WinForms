@@ -7,3 +7,4 @@ namespace L4D2AddonInstaller.Core.Modern
     {
     }
 }
+

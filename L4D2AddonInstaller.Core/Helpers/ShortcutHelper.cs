@@ -1,4 +1,4 @@
-﻿using IWshRuntimeLibrary;
+using IWshRuntimeLibrary;
 using System;
 using System.IO;
 

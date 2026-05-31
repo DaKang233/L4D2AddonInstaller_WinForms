@@ -1,4 +1,4 @@
-﻿using System.Windows.Forms;
+using System.Windows.Forms;
 
 namespace L4D2AddonInstaller
 {
@@ -10,3 +10,4 @@ namespace L4D2AddonInstaller
         }
     }
 }
+

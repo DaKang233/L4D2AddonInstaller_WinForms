@@ -1,4 +1,4 @@
-﻿using L4D2AddonInstaller.WinUi3.Services;
+using L4D2AddonInstaller.WinUi3.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
@@ -62,3 +62,4 @@ namespace L4D2AddonInstaller.WinUi3
         }
     }
 }
+

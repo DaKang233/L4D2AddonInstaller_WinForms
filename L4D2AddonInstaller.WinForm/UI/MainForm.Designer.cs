@@ -1,4 +1,4 @@
-﻿namespace L4D2AddonInstaller
+namespace L4D2AddonInstaller
 {
     partial class MainForm
     {
@@ -480,4 +480,5 @@
         private System.Windows.Forms.Button btnOpenArchiveDownloadFolder;
     }
 }
+
 

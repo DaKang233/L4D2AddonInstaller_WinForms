@@ -1,4 +1,4 @@
-﻿using L4D2AddonInstaller.Parsers;
+using L4D2AddonInstaller.Parsers;
 using L4D2AddonInstaller.UI;
 using System;
 using System.Collections.Generic;
@@ -177,3 +177,4 @@ namespace L4D2AddonInstaller
         }
     }
 }
+
